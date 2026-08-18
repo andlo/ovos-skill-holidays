@@ -49,6 +49,31 @@ holidays/calendar skill" in `ovos-skill-nameday`'s README for the
 reasoning (different sourcing architecture, different maintenance
 burden).
 
+## Collision risk with ovos-skill-nameday
+
+Both skills naturally produce a "hvornår er det X" / "when is X"
+style intent, and there's a real (not just theoretical) overlap
+case: **"Sankt Hans"** is a Danish public holiday (23 June), but the
+name it contains, "Hans", is also an ordinary given name with its
+own name day - so "hvornår er det Sankt Hans" risks colliding with
+`ovos-skill-nameday`'s "hvornår har Hans navnedag" if both skills'
+slot vocabularies aren't kept strictly separate.
+
+**Resolution**: this skill's "when is X" intent trains its `{holiday}`
+slot on a closed, known list of actual holiday names ("Sankt Hans",
+"jul", "påske", ...) - not open vocabulary. "Sankt Hans" only matches
+here because it's a real entry in that closed list; a bare "Hans"
+never matches this skill's intent at all, closed-list slots don't
+partial-match. `ovos-skill-nameday`, by contrast, requires the
+explicit anchor word "navnedag" in the utterance and matches an open
+name slot - so "hvornår har Hans navnedag" only ever routes there.
+
+A genuinely ambiguous utterance with no anchor word and no full
+holiday-name match ("hvornår er det Hans", alone) is left unhandled
+by both skills deliberately, rather than guessing - same kind of
+accepted, documented linguistic gray zone as geometry's
+perimeter/omkreds word-sharing, not a bug to solve.
+
 ## Open questions (resolve before implementing)
 
 - Locale-to-country mapping: `holidays` is keyed by country code, not
