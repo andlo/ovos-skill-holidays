@@ -1,0 +1,23 @@
+{
+  "skill_id": "ovos-skill-holidays.andlo",
+  "source": "https://github.com/andlo/ovos-skill-holidays",
+  "package_name": "ovos-skill-holidays",
+  "pip_spec": "ovos-skill-holidays",
+  "license": "GPL-3.0-or-later",
+  "author": "andlo",
+  "name": "Jours fériés",
+  "description": "Jours fériés, Pâques et calcul de dates. Entièrement hors ligne, calculé en direct via la bibliothèque holidays.",
+  "examples": [
+    "est-ce que c'est férié aujourd'hui",
+    "quand est noël",
+    "combien de jours avant pâques",
+    "quel jour de la semaine est le 3 mars"
+  ],
+  "tags": [
+    "jours fériés",
+    "calendrier",
+    "date",
+    "pâques"
+  ],
+  "icon": "https://raw.githubusercontent.com/andlo/ovos-skill-holidays/main/icon.png"
+}

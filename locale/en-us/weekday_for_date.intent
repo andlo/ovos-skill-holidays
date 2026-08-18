@@ -1,0 +1,3 @@
+what day of the week is {date_utterance}
+what day of the week was {date_utterance}
+what weekday is {date_utterance}

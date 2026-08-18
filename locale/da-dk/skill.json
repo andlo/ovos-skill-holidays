@@ -1,0 +1,23 @@
+{
+  "skill_id": "ovos-skill-holidays.andlo",
+  "source": "https://github.com/andlo/ovos-skill-holidays",
+  "package_name": "ovos-skill-holidays",
+  "pip_spec": "ovos-skill-holidays",
+  "license": "GPL-3.0-or-later",
+  "author": "andlo",
+  "name": "Helligdage",
+  "description": "Helligdage, påske og datoberegning. Fuldt offline, beregnet direkte via holidays-biblioteket.",
+  "examples": [
+    "er i dag en helligdag",
+    "hvornår er det jul",
+    "hvor mange dage er der til påske",
+    "hvilken ugedag er 3. marts"
+  ],
+  "tags": [
+    "helligdage",
+    "kalender",
+    "dato",
+    "påske"
+  ],
+  "icon": "https://raw.githubusercontent.com/andlo/ovos-skill-holidays/main/icon.png"
+}

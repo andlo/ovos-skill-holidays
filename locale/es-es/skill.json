@@ -1,0 +1,23 @@
+{
+  "skill_id": "ovos-skill-holidays.andlo",
+  "source": "https://github.com/andlo/ovos-skill-holidays",
+  "package_name": "ovos-skill-holidays",
+  "pip_spec": "ovos-skill-holidays",
+  "license": "GPL-3.0-or-later",
+  "author": "andlo",
+  "name": "Días festivos",
+  "description": "Días festivos, Pascua y cálculo de fechas. Totalmente sin conexión, calculado en vivo mediante la biblioteca holidays.",
+  "examples": [
+    "es hoy festivo",
+    "cuándo es navidad",
+    "cuántos días faltan para pascua",
+    "qué día de la semana es el 3 de marzo"
+  ],
+  "tags": [
+    "días festivos",
+    "calendario",
+    "fecha",
+    "pascua"
+  ],
+  "icon": "https://raw.githubusercontent.com/andlo/ovos-skill-holidays/main/icon.png"
+}

@@ -1,0 +1,23 @@
+{
+  "skill_id": "ovos-skill-holidays.andlo",
+  "source": "https://github.com/andlo/ovos-skill-holidays",
+  "package_name": "ovos-skill-holidays",
+  "pip_spec": "ovos-skill-holidays",
+  "license": "GPL-3.0-or-later",
+  "author": "andlo",
+  "name": "Feiertage",
+  "description": "Feiertage, Ostern und Datumsberechnung. Vollstandig offline, live berechnet uber die holidays-Bibliothek.",
+  "examples": [
+    "ist heute ein feiertag",
+    "wann ist weihnachten",
+    "wie viele tage sind es bis ostern",
+    "welcher wochentag ist der 3. märz"
+  ],
+  "tags": [
+    "feiertage",
+    "kalender",
+    "datum",
+    "ostern"
+  ],
+  "icon": "https://raw.githubusercontent.com/andlo/ovos-skill-holidays/main/icon.png"
+}
