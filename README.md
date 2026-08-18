@@ -1,109 +1,135 @@
-# Holidays — a design document, not a working skill yet
+# <img src='icon.png' card_color='#1E8882' width='50' height='50' style='vertical-align:bottom'/> Holidays
 
-**Status: idea and library-investigation stage.**
+Public holidays, Easter, and calendar-date questions for OVOS - "is
+today a holiday", "when is Christmas", "how many days until Easter",
+"what day of the week is March 3rd". Fully offline, available in
+English, Danish, German, French, and Spanish.
 
-## The idea
+[![Tests](https://github.com/andlo/ovos-skill-holidays/actions/workflows/test.yml/badge.svg)](https://github.com/andlo/ovos-skill-holidays/actions/workflows/test.yml)
+[![PyPI version](https://img.shields.io/pypi/v/ovos-skill-holidays.svg)](https://pypi.org/project/ovos-skill-holidays/)
 
-"Hvornår er det påske i år", "er i dag en helligdag", "hvor mange
-dage er der mellem jul og nytår" - public-holiday lookups and simple
-calendar math, fully offline.
+- [What it answers](#what-it-answers)
+- [Usage](#usage)
+- [Sourcing: computed, not bundled](#sourcing-computed-not-bundled)
+- [Relationship to ovos-skill-nameday](#relationship-to-ovos-skill-nameday)
+- [Known limitations](#known-limitations)
+- [Install](#install)
+- [Development](#development)
+
+## What it answers
+
+- **Is today a holiday** - `"is today a holiday"`.
+- **When a named holiday falls** - `"when is Christmas"`, including
+  Easter (`"when is Easter"`) computed directly via Computus rather
+  than depending on it appearing in every country's own holiday list
+  (some countries only list Easter Monday, since Easter Sunday is
+  implicit).
+- **Days until a named holiday** - `"how many days until Easter"`.
+- **What weekday a given date falls/fell on** - `"what day of the
+  week is March 3rd"`, `"what day of the week was May 17th 1990"`.
+
+**Not included**: general arbitrary date-to-date arithmetic ("how
+many days between March 3rd and June 12th") - that's proposed as a
+small upstream addition to the official `ovos-skill-date-time` skill
+instead of a new skill here, since it's a natural extension of what
+that skill already does, not something specific to holidays. See
+[OpenVoiceOS/ovos-skill-date-time#274](https://github.com/OpenVoiceOS/ovos-skill-date-time/issues/274).
+
+## Usage
+```
+"is today a holiday"
+"when is christmas"
+"how many days until easter"
+"what day of the week is march 3rd"
+"er i dag en helligdag"                   (Danish)
+"hvornår er det jul"                      (Danish)
+"hvor mange dage er der til påske"        (Danish)
+"ist heute ein feiertag"                  (German)
+"wann ist weihnachten"                    (German)
+"est-ce que c'est férié aujourd'hui"      (French)
+"quand est noël"                          (French)
+"es hoy festivo"                          (Spanish)
+"cuándo es navidad"                       (Spanish)
+```
 
 ## Sourcing: computed, not bundled
 
 Unlike `ovos-skill-nameday` (which needs an actual bundled per-locale
-dataset), holiday dates can be **computed algorithmically** via the
-Python `holidays` library - it covers ~100 countries, computes
-movable feasts like Easter via the Computus algorithm rather than a
-static lookup table, and needs zero network access or bundled data
-files at runtime. This is a meaningfully different (and simpler)
-architecture than every other skill in this project family, since
-there's no `build_data.py`/`titles_*.json`/`summaries_*.json` step at
-all - just a dependency and a locale-to-country mapping.
-
-## Scope: two related but distinct capabilities
-
-1. **Holiday lookup** - "is today a holiday", "when is Easter this
-   year", "what's the next public holiday" - powered by the
-   `holidays` library.
-2. **General date arithmetic** - "how many days between X and Y",
-   "what day of the week is/was [date]", "how many weeks until
-   Christmas" - pure calculation, no library needed beyond the
-   standard library's own date handling.
-
-Both were originally considered for a PR to the official
-`OpenVoiceOS/ovos-skill-date-time` skill instead of a new skill here,
-since date arithmetic in particular is a natural, small extension of
-what that skill already does (see
-[ovos-skill-date-time#274](https://github.com/OpenVoiceOS/ovos-skill-date-time/issues/274)
-for that half). Holiday lookup was judged too large a scope addition
-for someone else's skill (a new dependency, multi-country data,
-meaningfully expanding what "date-time" means) to propose as a PR -
-better as its own thing here. Worth revisiting whether date
-arithmetic ends up here instead, depending on how the upstream issue
-is received.
+dataset), holiday dates are **computed live** via the Python
+`holidays` library - it covers ~100 countries and implements Computus
+and other calendar rules directly, no network access and no bundled
+date data at runtime. There is no `build_data.py`/`titles_*.json`
+step the way `ovos-skill-wiki-offline`/`ovos-skill-geography` have -
+just a dependency, a locale-to-country mapping, and a small
+hand-curated per-locale alias list (`locale/<lang>/holiday_aliases.json`)
+for the handful of holidays people are likely to ask about by an
+everyday name rather than the library's formal calendar name (e.g.
+Danish "jul" vs. the library's own "Juledag").
 
 ## Relationship to ovos-skill-nameday
 
-Deliberately kept separate - see "Relationship to a possible
-holidays/calendar skill" in `ovos-skill-nameday`'s README for the
-reasoning (different sourcing architecture, different maintenance
-burden).
+Deliberately kept as a separate skill from name-day (navnedag)
+lookups, despite both answering "what's special about today" -
+holidays are computed algorithmically here, while name days need an
+actual bundled per-locale dataset (closer to `ovos-skill-wiki-offline`'s
+architecture). See `ovos-skill-nameday`'s README for the fuller
+reasoning.
 
-## Collision risk with ovos-skill-nameday
+**Collision risk, verified rather than assumed**: an early draft used
+an invented Danish example ("Sankt Hans") that turned out not to
+exist in the actual `holidays` library data at all. The real,
+checked collision case is Finland's official "flag days"
+(liputuspäivät), several of which are genuinely named after real
+people - e.g. `Mikael Agricolan päivä` (Mikael Agricola Day), where
+"Mikael" is also an ordinary Finnish given name with its own name
+day. Resolved by how each skill's intent is scoped: this skill's
+`{holiday}` slot captures free text and validates it in code against
+that locale's own official holiday names (`resolve_holiday()`) - a
+bare "Mikael" with no match in that list simply doesn't resolve here,
+while `ovos-skill-nameday`'s intents require an explicit anchor word
+("navnedag" or the local equivalent) and match an open name slot
+instead, so the two skills' matching utterances don't overlap even
+though the underlying words can.
 
-**Correction, checked against the actual `holidays` library data**:
-an earlier version of this section used "Sankt Hans" (23 June, whose
-name embeds the common given name "Hans") as the example collision
-case. Verified against `holidays.Denmark(years=2026,
-categories=('public','optional'))` and it's simply **not present** in
-either category - it's a folk tradition, not tracked by this library
-at all for Denmark. Don't assume a plausible-sounding example holds
-without checking the actual data source, same lesson wiki-offline
-learned the hard way with its title-sourcing.
+## Known limitations
 
-The real, **verified** collision case is Finland's official "flag
-days" (liputuspäivät), which the library does track as `optional`
-category entries and which are genuinely named after real people -
-e.g. `2026-04-09 Mikael Agricolan päivä, suomen kielen päivä`
-(Mikael Agricola Day). "Mikael" is an ordinary Finnish given name
-with its own name day, so "milloin on Mikael-päivä" risks the exact
-same collision as the originally-imagined Danish case, just for a
-different country and confirmed to actually exist in the data.
+- **Locale-to-country is a fixed mapping, not a general solution.**
+  `holidays` is keyed by ISO country code; a locale like `es-es`
+  doesn't uniquely determine a Spanish-speaking country in general
+  the way it's mapped here to Spain specifically (not, say, Mexico or
+  Argentina) - honest for this project's 5 fixed locales, not a claim
+  to solve language-to-country mapping generally.
+- **Same-day multi-category name merging.** When a country's library
+  entry has two categories both naming the same date, `holidays`
+  joins the names with `"; "` (e.g. the US's Martin Luther King Jr.
+  Day). Resolution stays consistent either way, but a merged name
+  would sound awkward spoken verbatim if a user's phrasing happened
+  to substring-match into one rather than a curated alias.
+- **Regional/subnational holidays aren't included** - `holidays`
+  supports state/province-level subdivisions via a subdivision code,
+  but this skill only requests national-level categories for now.
+- **The alias list is hand-curated and incomplete by design** - it
+  covers the holidays people are actually likely to ask about by an
+  everyday name per locale; anything not listed still resolves via a
+  substring match against the library's own official names, just
+  less reliably than a curated entry.
 
-**Resolution** (unchanged in substance, now grounded in a real
-example): this skill's "when is X" intent trains its `{holiday}` slot
-on a closed, known list of actual holiday/flag-day names pulled
-directly from the `holidays` library's own data per country - not
-open vocabulary. "Mikael Agricolan päivä" only matches here because
-it's a literal entry in that closed, per-country list; a bare
-"Mikael" never matches this skill's intent at all, closed-list slots
-don't partial-match. `ovos-skill-nameday`, by contrast, requires an
-explicit anchor word in the utterance and matches an open name slot -
-so a plain "when is Mikael's name day" only ever routes there.
+See [DEVELOPMENT.md](DEVELOPMENT.md) for the full reasoning behind
+each of these, plus two real alias-curation errors and a category-
+naming bug caught by verifying against the library's actual output
+rather than assuming it during development.
 
-A genuinely ambiguous utterance with no anchor word and no full
-holiday-name match is left unhandled by both skills deliberately,
-rather than guessing - same kind of accepted, documented linguistic
-gray zone as geometry's perimeter/omkreds word-sharing, not a bug to
-solve.
+## Install
+```bash
+pip install ovos-skill-holidays
+```
 
-## Open questions (resolve before implementing)
+## Development
 
-- Locale-to-country mapping: `holidays` is keyed by country code, not
-  language code - `da-dk` maps cleanly to Denmark, but a locale like
-  `es-es` doesn't uniquely determine which Spanish-speaking country's
-  holiday calendar to use. Needs an explicit mapping or a
-  configurable "which country's holidays" setting, not an assumption.
-- Whether the upstream `ovos-skill-date-time` PR
-  (issue #274) lands, and whether that changes this skill's scope
-  down to just holiday lookup.
-- Regional/subnational holidays (some countries have state or
-  province-level holidays in addition to national ones) - `holidays`
-  supports this via subdivision codes, but worth deciding if v1 needs
-  it or national-only is enough to start.
+See [DEVELOPMENT.md](DEVELOPMENT.md).
 
 ## Category
 **Daily**
 
 ## Tags
-#holidays #calendar #date-math #idea #design-doc
+#holidays #calendar #date-math #easter
