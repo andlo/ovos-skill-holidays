@@ -42,8 +42,8 @@ ovos-skill-nameday" and "Collision risk with ovos-skill-nameday" for
 the reasoning and a verified (not assumed) collision example.
 """
 
-import calendar
-from datetime import date, timedelta
+import json
+from datetime import date
 from pathlib import Path
 
 import holidays
@@ -54,6 +54,33 @@ from ovos_workshop.decorators import intent_handler, common_query
 SKILL_ROOT = Path(__file__).resolve().parent
 LOCALE_DIR = SKILL_ROOT / "locale"
 
+
+def _load_json(path):
+    if not path.exists():
+        return None
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _load_locale_json(filename, default):
+    """locale/<lang>/<filename> -> {lang: <parsed JSON>}, same
+    convention ovos-skill-geometry uses for GLOSSARY_NAMES/
+    FORMULA_WORDS - keeps every piece of language-specific content in
+    locale/ alongside the .intent/.dialog files, rather than
+    hardcoded in this module. `default` is returned per-language when
+    a locale is missing the file entirely, so callers don't need
+    None-checks scattered through their logic."""
+    merged = {}
+    if not LOCALE_DIR.is_dir():
+        return merged
+    for lang_dir in sorted(LOCALE_DIR.iterdir()):
+        if not lang_dir.is_dir():
+            continue
+        data = _load_json(lang_dir / filename)
+        merged[lang_dir.name.lower()] = data if data is not None else default
+    return merged
+
+
 # lang -> ISO country code the `holidays` library understands. Not a
 # 1:1 language-to-country mapping in general (es-es doesn't uniquely
 # determine a Spanish-speaking country any more than en-us uniquely
@@ -62,7 +89,11 @@ LOCALE_DIR = SKILL_ROOT / "locale"
 # convention (en-us -> US, not UK/AU/CA; es-es -> Spain, not Latin
 # America), so a plain per-locale dict is honest and sufficient here.
 # A generic language->country solution is a bigger problem this skill
-# doesn't need to solve for its own fixed locale set.
+# doesn't need to solve for its own fixed locale set. Kept as a
+# constant here rather than a locale/ file - unlike the other tables
+# below, this ISN'T translatable content a locale contributor would
+# ever edit, it's a structural decision about which country each of
+# this project's 5 fixed locales represents.
 LOCALE_TO_COUNTRY = {
     "en-us": "US",
     "da-dk": "DK",
@@ -70,6 +101,44 @@ LOCALE_TO_COUNTRY = {
     "fr-fr": "FR",
     "es-es": "ES",
 }
+
+EASTER_SENTINEL = "__EASTER__"
+
+# The `holidays` library's own names are the FORMAL calendar names
+# ("Juledag", "Christmas Day"), which don't always match how people
+# naturally ask ("jul", not "juledag" - a real gap, verified by
+# inspecting actual library output, not assumed). Loaded from
+# locale/<lang>/holiday_aliases.json - a hand-curated map of the
+# holidays people are actually likely to ask about, by locale, to the
+# library's exact official name (or EASTER_SENTINEL). Anything not in
+# this list still resolves via substring-matching the spoken text
+# against whatever official names the library actually returns for
+# that locale's country, see resolve_holiday().
+HOLIDAY_ALIASES = _load_locale_json("holiday_aliases.json", {})
+
+# Monday-first weekday names, loaded from
+# locale/<lang>/weekday_names.json. A localized name via the standard
+# library's own locale data would require setting the process locale
+# (not thread-safe, affects the whole process) - deliberately
+# avoided; a small locale/ data file is simpler and matches this
+# project's existing convention for short, stable vocabulary lists.
+WEEKDAY_NAMES = _load_locale_json("weekday_names.json", None)
+
+# The word this skill speaks for EASTER_SENTINEL, per locale - loaded
+# from locale/<lang>/easter_name.json. Kept as its own small file
+# rather than folded into holiday_aliases.json, since that file maps
+# SPOKEN INPUT -> official name (many keys can point at
+# EASTER_SENTINEL, e.g. es-es has both "semana santa" and "pascua"),
+# while this is the single OUTPUT word to speak back - a different
+# direction, not just the reverse of the same table.
+EASTER_NAMES = _load_locale_json("easter_name.json", "Easter")
+
+# "when is X" / "hvornår er det X" style prefixes this skill's narrow
+# Common Query safety net recognizes, loaded from
+# locale/<lang>/question_prefixes.json. See "Common Query safety net"
+# section below for why this exists at all.
+QUESTION_PREFIXES = _load_locale_json("question_prefixes.json", [])
+
 
 # Categories are NOT standardized across countries in this library -
 # verified the hard way: Denmark's non-statutory observances
@@ -102,71 +171,6 @@ def _country_holidays(lang, years):
     return cls(years=years, categories=categories)
 
 
-# ---------------------------------------------------------------
-# Alias resolution - the `holidays` library's own names are the
-# FORMAL calendar names ("Juledag", "Christmas Day"), which don't
-# always match how people naturally ask ("jul", not "juledag" - a
-# real gap, verified by inspecting actual library output, not
-# assumed). A small, hand-curated per-locale alias map covers the
-# holidays people are actually likely to ask about by a shorter/
-# different everyday name; anything not in this list still resolves
-# via substring/prefix matching against the library's own official
-# names as a fallback, see resolve_holiday().
-# ---------------------------------------------------------------
-HOLIDAY_ALIASES = {
-    "en-us": {
-        "christmas": "Christmas Day",
-        "new year": "New Year's Day",
-        "new years": "New Year's Day",
-        "independence day": "Independence Day",
-        "thanksgiving": "Thanksgiving Day",
-        "labor day": "Labor Day",
-        "halloween": "Halloween",
-        "easter": "__EASTER__",
-    },
-    "da-dk": {
-        "jul": "Juledag",
-        "juledag": "Juledag",
-        "juleaften": "Juleaftensdag",
-        "nytår": "Nytårsdag",
-        "nytårsaften": "Nytårsaften",
-        "grundlovsdag": "Grundlovsdag",
-        "pinse": "Pinsedag",
-        "kristi himmelfart": "Kristi himmelfartsdag",
-        "påske": "__EASTER__",
-    },
-    "de-de": {
-        "weihnachten": "Erster Weihnachtstag",
-        "neujahr": "Neujahr",
-        "tag der deutschen einheit": "Tag der Deutschen Einheit",
-        "christi himmelfahrt": "Christi Himmelfahrt",
-        "pfingsten": "Pfingstmontag",
-        "ostern": "__EASTER__",
-    },
-    "fr-fr": {
-        "noël": "Noël",
-        "jour de l'an": "Jour de l'an",
-        "fête du travail": "Fête du Travail",
-        "fête nationale": "Fête nationale",
-        "toussaint": "Toussaint",
-        "ascension": "Ascension",
-        "pâques": "__EASTER__",
-    },
-    "es-es": {
-        "navidad": "Natividad del Señor",
-        "año nuevo": "Año Nuevo",
-        "reyes": "Epifanía del Señor",
-        "fiesta nacional": "Fiesta Nacional de España",
-        "constitución": "Día de la Constitución Española",
-        "asunción": "Asunción de la Virgen",
-        "semana santa": "__EASTER__",
-        "pascua": "__EASTER__",
-    },
-}
-
-EASTER_SENTINEL = "__EASTER__"
-
-
 def resolve_holiday(raw, lang):
     """Resolves spoken text to either EASTER_SENTINEL or one of the
     `holidays` library's own official names for this locale's
@@ -193,14 +197,11 @@ def resolve_holiday(raw, lang):
 
 def holiday_display_name(resolved, lang):
     """Reverses resolve_holiday() for display: EASTER_SENTINEL ->
-    a spoken-friendly word for this locale, official names -> as-is
-    (they're already real words in the target language, unlike a
-    machine key)."""
+    a spoken-friendly word for this locale (from EASTER_NAMES),
+    official names -> as-is (they're already real words in the
+    target language, unlike a machine key)."""
     if resolved == EASTER_SENTINEL:
-        return {
-            "en-us": "Easter", "da-dk": "påske", "de-de": "Ostern",
-            "fr-fr": "Pâques", "es-es": "Pascua",
-        }.get(lang.lower(), "Easter")
+        return EASTER_NAMES.get(lang.lower(), "Easter")
     return resolved
 
 
@@ -240,20 +241,10 @@ def is_holiday_today(lang):
 
 
 def weekday_name(target_date, lang):
-    """Localized weekday name via the standard library's own locale
-    data would require setting the process locale (not thread-safe,
-    affects the whole process) - deliberately avoided. Uses a small
-    hand-written table instead, same approach as
-    ovos-skill-geometry's hand-authored glossary rather than pulling
-    in a locale/i18n dependency for 5 weekday names."""
-    weekday_names = {
-        "en-us": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
-        "da-dk": ["mandag", "tirsdag", "onsdag", "torsdag", "fredag", "lørdag", "søndag"],
-        "de-de": ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"],
-        "fr-fr": ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"],
-        "es-es": ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"],
-    }
-    names = weekday_names.get(lang.lower(), weekday_names["en-us"])
+    """Looks up target_date's Monday-first weekday name from
+    WEEKDAY_NAMES (locale/<lang>/weekday_names.json), falling back to
+    en-us if the locale is missing."""
+    names = WEEKDAY_NAMES.get(lang.lower()) or WEEKDAY_NAMES.get("en-us")
     return names[target_date.weekday()]
 
 
@@ -269,14 +260,6 @@ def days_between(from_date, to_date):
 # #68), reusing the exact same resolve_holiday() intents already use
 # rather than a second implementation.
 # ---------------------------------------------------------------
-QUESTION_PREFIXES = {
-    "en-us": ["when is ", "when's "],
-    "da-dk": ["hvornår er det ", "hvornår er "],
-    "de-de": ["wann ist "],
-    "fr-fr": ["quand est ", "c'est quand "],
-    "es-es": ["cuándo es "],
-}
-
 
 def _strip_question_prefix(phrase, lang):
     lang = lang.lower()

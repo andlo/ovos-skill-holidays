@@ -1,5 +1,24 @@
 # Development
 
+## Language data belongs in locale/, not hardcoded in __init__.py
+
+An earlier draft hardcoded `HOLIDAY_ALIASES`, weekday names, the
+Easter display name, and the Common Query `QUESTION_PREFIXES`
+directly as Python dicts inside `__init__.py`, instead of following
+`ovos-skill-geometry`'s established convention of loading translatable
+content from `locale/<lang>/*.json` via a `_load_locale_json()`
+helper. Caught in review, not by a test - nothing broke, it was
+simply the wrong place for the data to live: someone adding or fixing
+a translation had to edit Python code instead of a locale file, and
+it was inconsistent with every sibling skill in this project family.
+Fixed by moving all four into `locale/<lang>/holiday_aliases.json`,
+`weekday_names.json`, `easter_name.json`, and `question_prefixes.json`
+respectively, loaded the same way geometry loads
+`glossary_names.json`/`formula_words.json`. `LOCALE_TO_COUNTRY`
+deliberately stayed a Python constant, not a locale file - it isn't
+translatable content, it's a structural decision about which country
+each of this project's 5 fixed locales maps to.
+
 ## Architecture: fixed intents, not FallbackSkill
 
 Public holidays and calendar math are a bounded domain with
