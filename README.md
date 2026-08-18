@@ -51,28 +51,41 @@ burden).
 
 ## Collision risk with ovos-skill-nameday
 
-Both skills naturally produce a "hvornår er det X" / "when is X"
-style intent, and there's a real (not just theoretical) overlap
-case: **"Sankt Hans"** is a Danish public holiday (23 June), but the
-name it contains, "Hans", is also an ordinary given name with its
-own name day - so "hvornår er det Sankt Hans" risks colliding with
-`ovos-skill-nameday`'s "hvornår har Hans navnedag" if both skills'
-slot vocabularies aren't kept strictly separate.
+**Correction, checked against the actual `holidays` library data**:
+an earlier version of this section used "Sankt Hans" (23 June, whose
+name embeds the common given name "Hans") as the example collision
+case. Verified against `holidays.Denmark(years=2026,
+categories=('public','optional'))` and it's simply **not present** in
+either category - it's a folk tradition, not tracked by this library
+at all for Denmark. Don't assume a plausible-sounding example holds
+without checking the actual data source, same lesson wiki-offline
+learned the hard way with its title-sourcing.
 
-**Resolution**: this skill's "when is X" intent trains its `{holiday}`
-slot on a closed, known list of actual holiday names ("Sankt Hans",
-"jul", "påske", ...) - not open vocabulary. "Sankt Hans" only matches
-here because it's a real entry in that closed list; a bare "Hans"
-never matches this skill's intent at all, closed-list slots don't
-partial-match. `ovos-skill-nameday`, by contrast, requires the
-explicit anchor word "navnedag" in the utterance and matches an open
-name slot - so "hvornår har Hans navnedag" only ever routes there.
+The real, **verified** collision case is Finland's official "flag
+days" (liputuspäivät), which the library does track as `optional`
+category entries and which are genuinely named after real people -
+e.g. `2026-04-09 Mikael Agricolan päivä, suomen kielen päivä`
+(Mikael Agricola Day). "Mikael" is an ordinary Finnish given name
+with its own name day, so "milloin on Mikael-päivä" risks the exact
+same collision as the originally-imagined Danish case, just for a
+different country and confirmed to actually exist in the data.
+
+**Resolution** (unchanged in substance, now grounded in a real
+example): this skill's "when is X" intent trains its `{holiday}` slot
+on a closed, known list of actual holiday/flag-day names pulled
+directly from the `holidays` library's own data per country - not
+open vocabulary. "Mikael Agricolan päivä" only matches here because
+it's a literal entry in that closed, per-country list; a bare
+"Mikael" never matches this skill's intent at all, closed-list slots
+don't partial-match. `ovos-skill-nameday`, by contrast, requires an
+explicit anchor word in the utterance and matches an open name slot -
+so a plain "when is Mikael's name day" only ever routes there.
 
 A genuinely ambiguous utterance with no anchor word and no full
-holiday-name match ("hvornår er det Hans", alone) is left unhandled
-by both skills deliberately, rather than guessing - same kind of
-accepted, documented linguistic gray zone as geometry's
-perimeter/omkreds word-sharing, not a bug to solve.
+holiday-name match is left unhandled by both skills deliberately,
+rather than guessing - same kind of accepted, documented linguistic
+gray zone as geometry's perimeter/omkreds word-sharing, not a bug to
+solve.
 
 ## Open questions (resolve before implementing)
 
