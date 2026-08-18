@@ -93,12 +93,14 @@ though the underlying words can.
 
 ## Known limitations
 
-- **Locale-to-country is a fixed mapping, not a general solution.**
-  `holidays` is keyed by ISO country code; a locale like `es-es`
-  doesn't uniquely determine a Spanish-speaking country in general
-  the way it's mapped here to Spain specifically (not, say, Mexico or
-  Argentina) - honest for this project's 5 fixed locales, not a claim
-  to solve language-to-country mapping generally.
+- **Country is derived from the locale's region subtag, not a
+  general language-to-country solution.** `en-us` derives `US` by
+  taking the region subtag directly (BCP-47's language-REGION
+  convention makes this exact, not a guess) - but a locale like
+  `es-es` still only maps to Spain specifically, not "some
+  representative Spanish-speaking country"; honest for how each of
+  this project's locales is actually defined, not a claim to solve
+  language-to-country mapping in general.
 - **Same-day multi-category name merging.** When a country's library
   entry has two categories both naming the same date, `holidays`
   joins the names with `"; "` (e.g. the US's Martin Luther King Jr.

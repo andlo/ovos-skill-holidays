@@ -81,26 +81,29 @@ def _load_locale_json(filename, default):
     return merged
 
 
-# lang -> ISO country code the `holidays` library understands. Not a
-# 1:1 language-to-country mapping in general (es-es doesn't uniquely
-# determine a Spanish-speaking country any more than en-us uniquely
-# determines an English-speaking one) - but for THIS project family's
-# existing 5 locales, each already maps to one specific country by
-# convention (en-us -> US, not UK/AU/CA; es-es -> Spain, not Latin
-# America), so a plain per-locale dict is honest and sufficient here.
-# A generic language->country solution is a bigger problem this skill
-# doesn't need to solve for its own fixed locale set. Kept as a
-# constant here rather than a locale/ file - unlike the other tables
-# below, this ISN'T translatable content a locale contributor would
-# ever edit, it's a structural decision about which country each of
-# this project's 5 fixed locales represents.
-LOCALE_TO_COUNTRY = {
-    "en-us": "US",
-    "da-dk": "DK",
-    "de-de": "DE",
-    "fr-fr": "FR",
-    "es-es": "ES",
-}
+# Derives the ISO 3166-1 country code from a BCP-47 locale tag's
+# region subtag - "en-us" -> "US", "da-dk" -> "DK". Not a guess or a
+# coincidence: BCP-47's language-REGION convention makes the region
+# subtag exactly the country code whenever the region is a two-letter
+# code, which every locale this project uses already is. Confirmed
+# against ovos_utils.lang.standardize_lang_tag()'s own fallback
+# behavior (used when the optional `langcodes` library isn't
+# installed), which does the same split-and-uppercase - not reused
+# directly to avoid an undeclared transitive dependency, but the
+# logic is the same, verified one, not reinvented. An earlier draft
+# hardcoded a 5-entry LOCALE_TO_COUNTRY dict that happened to produce
+# identical answers for all 5 of this project's locales, but for the
+# wrong reason (each entry was independently hand-transcribed, not
+# derived from the rule that actually explains why they're all
+# correct) - see DEVELOPMENT.md.
+def _country_for_locale(lang):
+    if not lang or "-" not in lang:
+        return None
+    region = lang.rsplit("-", 1)[-1]
+    if len(region) != 2:
+        return None
+    return region.upper()
+
 
 EASTER_SENTINEL = "__EASTER__"
 
@@ -161,7 +164,7 @@ def _country_holidays(lang, years):
     enough (pure calendar arithmetic, no I/O) that per-query
     computation is fine, see DEVELOPMENT.md "Performance: why no
     caching layer"."""
-    country = LOCALE_TO_COUNTRY.get(lang.lower())
+    country = _country_for_locale(lang.lower())
     if country is None:
         return {}
     cls = getattr(holidays, country, None)

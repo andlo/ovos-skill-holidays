@@ -1,5 +1,30 @@
 # Development
 
+## Deriving the country from the locale, not a hardcoded table
+
+An earlier draft hardcoded a 5-entry `LOCALE_TO_COUNTRY` dict
+(`{"en-us": "US", "da-dk": "DK", ...}`). Caught in review: this was
+unnecessary. BCP-47's language-REGION convention means the region
+subtag of a locale tag already IS the ISO 3166-1 country code
+whenever the region is a two-letter code - which every locale this
+project uses already is (`en-us`, `da-dk`, `de-de`, `fr-fr`, `es-es`
+all follow exactly this pattern). `_country_for_locale()` now derives
+the country by splitting on `-` and uppercasing the last part, rather
+than maintaining a table that happened to give correct answers for
+the current 5 locales but for the wrong reason (each entry was
+independently hand-transcribed, not derived from the rule that
+actually explains why they're all correct). Confirmed this isn't just
+a coincidence for this project by checking
+`ovos_utils.lang.standardize_lang_tag()`'s own fallback path (used
+when the optional `langcodes` library isn't installed) - it does the
+exact same split-and-uppercase. Not imported directly, to avoid
+depending on `ovos_utils` without declaring it in `requirements.txt`,
+but the logic is the same well-established one, not reinvented from
+scratch. This also means the skill now generalizes automatically to
+any future two-letter-region locale without needing a maintained
+mapping table at all - adding a 6th locale is purely a matter of
+adding `locale/<new-lang>/` files, no `__init__.py` change needed.
+
 ## Language data belongs in locale/, not hardcoded in __init__.py
 
 An earlier draft hardcoded `HOLIDAY_ALIASES`, weekday names, the

@@ -82,5 +82,21 @@ def test_holiday_display_name_easter():
     assert mod.holiday_display_name(mod.EASTER_SENTINEL, "en-us") == "Easter"
 
 
+def test_country_for_locale_derives_from_region_subtag():
+    """Regression test: the country code comes from the locale's
+    region subtag directly, not a hardcoded per-locale table - see
+    DEVELOPMENT.md 'Deriving the country from the locale, not a
+    hardcoded table'."""
+    assert mod._country_for_locale("en-us") == "US"
+    assert mod._country_for_locale("da-dk") == "DK"
+    assert mod._country_for_locale("fr-fr") == "FR"
+
+
+def test_country_for_locale_no_region_returns_none():
+    assert mod._country_for_locale("en") is None
+    assert mod._country_for_locale("") is None
+    assert mod._country_for_locale(None) is None
+
+
 def test_holiday_display_name_passthrough():
     assert mod.holiday_display_name("Christmas Day", "en-us") == "Christmas Day"
