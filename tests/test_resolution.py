@@ -100,3 +100,17 @@ def test_country_for_locale_no_region_returns_none():
 
 def test_holiday_display_name_passthrough():
     assert mod.holiday_display_name("Christmas Day", "en-us") == "Christmas Day"
+
+
+
+def test_every_alias_is_a_holiday_entity():
+    """holiday.entity (what padatious matches {holiday} against) must list
+    every name holiday_aliases.json resolves - regenerate it when adding one."""
+    import json
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[1] / "locale"
+    for lang_dir in root.iterdir():
+        aliases = json.loads((lang_dir / "holiday_aliases.json").read_text(encoding="utf-8"))
+        entity = set((lang_dir / "holiday.entity").read_text(encoding="utf-8").split("\n"))
+        missing = {k.lower() for k in aliases if not k.startswith("_")} - entity
+        assert not missing, f"{lang_dir.name}: {missing}"

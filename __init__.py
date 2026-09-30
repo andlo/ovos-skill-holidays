@@ -278,6 +278,17 @@ class Holidays(OVOSSkill):
     """Fixed intents only (not FallbackSkill) - see DEVELOPMENT.md
     "Why fixed intents, not FallbackSkill" for the reasoning."""
 
+    def initialize(self):
+        # {holiday} is one of the names people use (locale/<lang>/
+        # holiday.entity: the names in holiday_aliases.json), so padatious
+        # scores "when is christmas" as a holiday rather than leaving it to
+        # ovos-skill-date-time's free "when is {date}" (issue #2).
+        # ovos-workshop 9.8 registers entity files by itself; 7.x doesn't.
+        try:
+            self.register_entity_file("holiday.entity")
+        except Exception as e:
+            self.log.warning(f"could not register holiday.entity: {e}")
+
     @common_query()
     def handle_common_query(self, phrase, lang):
         subject = _strip_question_prefix(phrase, lang)
