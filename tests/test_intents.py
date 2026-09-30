@@ -99,3 +99,24 @@ def test_weekday_for_date_unparseable(skill, monkeypatch):
     monkeypatch.setattr(skill, "_parse_date", lambda u: None)
     skill.handle_weekday_for_date(_msg(date_utterance="gibberish"))
     skill.speak_dialog.assert_called_once_with("date_not_understood")
+
+
+def test_a_spelled_out_line_carries_no_slot_but_still_resolves(skill, monkeypatch):
+    """issue #2: "when is christmas" is trained word for word (so it beats
+    ovos-skill-date-time's "when is {date}") and has no {holiday} slot."""
+    import holidays_skill as module
+    assert module.holiday_in_utterance("when is christmas", "en-us") == "christmas"
+    assert module.holiday_in_utterance("how many days until new years", "en-us") == "new years"
+    assert module.holiday_in_utterance("hvornår er det juleaften", "da-dk") == "juleaften"
+    assert module.holiday_in_utterance("when is my birthday", "en-us") is None
+
+
+def test_every_alias_is_spelled_out_in_the_intents():
+    import json
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[1] / "locale"
+    for lang_dir in root.iterdir():
+        aliases = json.loads((lang_dir / "holiday_aliases.json").read_text(encoding="utf-8"))
+        text = (lang_dir / "when_is_holiday.intent").read_text(encoding="utf-8")
+        for name in aliases:
+            assert f" {name.lower()}\n" in text, f"{lang_dir.name}: {name}"
