@@ -43,6 +43,7 @@ the reasoning and a verified (not assumed) collision example.
 """
 
 import json
+import re
 from datetime import date
 from pathlib import Path
 
@@ -198,6 +199,17 @@ def resolve_holiday(raw, lang):
     return None
 
 
+def holiday_in_utterance(utterance, lang):
+    """The holiday name (a key of holiday_aliases.json) an utterance
+    contains, longest first - for the spelled-out intent lines, which
+    carry no {holiday} slot ("when is christmas", issue #2)."""
+    text = (utterance or "").lower()
+    for name in sorted(HOLIDAY_ALIASES.get(lang.lower(), {}), key=len, reverse=True):
+        if not name.startswith("_") and re.search(rf"(?<!\w){re.escape(name.lower())}(?!\w)", text):
+            return name
+    return None
+
+
 def holiday_display_name(resolved, lang):
     """Reverses resolve_holiday() for display: EASTER_SENTINEL ->
     a spoken-friendly word for this locale (from EASTER_NAMES),
@@ -320,7 +332,7 @@ class Holidays(OVOSSkill):
 
     @intent_handler("when_is_holiday.intent")
     def handle_when_is_holiday(self, message):
-        raw = message.data.get("holiday")
+        raw = message.data.get("holiday") or holiday_in_utterance(message.data.get("utterance"), self.lang)
         resolved = resolve_holiday(raw, self.lang)
         if resolved is None:
             self.speak_dialog("holiday_not_understood", {"holiday": raw or ""})
@@ -338,7 +350,7 @@ class Holidays(OVOSSkill):
 
     @intent_handler("days_until_holiday.intent")
     def handle_days_until_holiday(self, message):
-        raw = message.data.get("holiday")
+        raw = message.data.get("holiday") or holiday_in_utterance(message.data.get("utterance"), self.lang)
         resolved = resolve_holiday(raw, self.lang)
         if resolved is None:
             self.speak_dialog("holiday_not_understood", {"holiday": raw or ""})
