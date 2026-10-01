@@ -110,6 +110,8 @@ def test_every_alias_is_a_holiday_entity():
     from pathlib import Path
     root = Path(__file__).resolve().parents[1] / "locale"
     for lang_dir in root.iterdir():
+        if not (lang_dir / "holiday_aliases.json").is_file():
+            continue  # a language still being translated (ovos-localize sends one file at a time)
         aliases = json.loads((lang_dir / "holiday_aliases.json").read_text(encoding="utf-8"))
         entity = set((lang_dir / "holiday.entity").read_text(encoding="utf-8").split("\n"))
         missing = {k.lower() for k in aliases if not k.startswith("_")} - entity
