@@ -116,6 +116,8 @@ def test_every_alias_is_spelled_out_in_the_intents():
     from pathlib import Path
     root = Path(__file__).resolve().parents[1] / "locale"
     for lang_dir in root.iterdir():
+        if not (lang_dir / "holiday_aliases.json").is_file():
+            continue  # a language still being translated (ovos-localize sends one file at a time)
         aliases = json.loads((lang_dir / "holiday_aliases.json").read_text(encoding="utf-8"))
         text = (lang_dir / "when_is_holiday.intent").read_text(encoding="utf-8")
         for name in aliases:
